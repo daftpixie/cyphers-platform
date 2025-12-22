@@ -1,0 +1,259 @@
+// prisma/schema.prisma
+// The Cyphers NFT Platform - Database Schema
+// Database: PostgreSQL (cyphers_db)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String   @id @default(cuid())
+  dogeAddress   String   @unique
+  displayName   String?
+  
+  // Optional link to main platform (24hrmvp.xyz)
+  ethAddress    String?  @unique
+  linkedAt      DateTime?
+  
+  // Activity tracking
+  lastLoginAt   DateTime?
+  loginCount    Int      @default(0)
+  
+  // Relations
+  cyphers       CypherNFT[]
+  mintSessions  MintSession[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([dogeAddress])
+  @@index([ethAddress])
+}
+
+model AuthChallenge {
+  id          String   @id @default(cuid())
+  nonce       String   @unique
+  dogeAddress String?
+  expiresAt   DateTime
+  used        Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([nonce])
+  @@index([expiresAt])
+}
+
+// ============================================
+// NFT COLLECTION
+// ============================================
+
+model CypherNFT {
+  id              String      @id @default(cuid())
+  tokenId         Int         @unique // 1-1000
+  
+  // Rarity & Classification
+  rarityTier      RarityTier  @default(COMMON)
+  rarityRole      String      // "Genesis Coder", "Protocol Engineer", etc.
+  
+  // Visual Traits (AI Generated)
+  maskType        String
+  materialType    String      // Gold, Silver, Steel, Chrome
+  encryptionType  String      // PGP, AES, RSA overlay styles
+  glitchLevel     String      // None, Low, Medium, High
+  backgroundStyle String      // Binary Rain, Hex Scroll, Grid
+  accentColor     String      // Hex color for neon accents
+  
+  // Full trait metadata as JSON
+  traitMetadata   Json?
+  
+  // AI Generation
+  generationPrompt String?    @db.Text
+  generationModel  String?
+  
+  // Storage
+  ipfsHash        String?
+  ipfsUrl         String?
+  imageUrl        String?
+  
+  // Doginals Inscription
+  inscriptionId   String?     @unique
+  inscriptionTx   String?
+  inscribedAt     DateTime?
+  
+  // Status
+  status          MintStatus  @default(PENDING)
+  
+  // Ownership
+  ownerAddress    String
+  user            User?       @relation(fields: [userId], references: [id])
+  userId          String?
+  
+  // Pricing
+  mintPrice       Float       @default(100) // DOGE
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  mintSession     MintSession?
+  
+  @@index([tokenId])
+  @@index([ownerAddress])
+  @@index([status])
+  @@index([rarityTier])
+  @@index([inscriptionId])
+}
+
+enum RarityTier {
+  LEGENDARY   // 1% - Genesis Coders
+  EPIC        // 5% - Protocol Engineers
+  RARE        // 15% - Node Operators
+  COMMON      // 79% - Anonymous Users
+}
+
+enum MintStatus {
+  PENDING           // Initial state
+  GENERATING        // AI generating image
+  GENERATION_FAILED // AI generation failed
+  AWAITING_PAYMENT  // Waiting for DOGE payment
+  PAYMENT_RECEIVED  // Payment confirmed
+  INSCRIBING        // Creating Doginal
+  INSCRIPTION_FAILED // Inscription failed
+  CONFIRMED         // Successfully inscribed
+  FAILED            // Generic failure
+}
+
+// ============================================
+// MINTING SESSIONS
+// ============================================
+
+model MintSession {
+  id              String      @id @default(cuid())
+  
+  // Session identification
+  sessionId       String      @unique
+  
+  // User
+  user            User        @relation(fields: [userId], references: [id])
+  userId          String
+  dogeAddress     String
+  
+  // Status tracking
+  status          MintStatus  @default(PENDING)
+  progress        Int         @default(0) // 0-100
+  statusMessage   String?
+  
+  // Payment
+  paymentAddress  String?     // Generated address for this mint
+  paymentAmount   Float       @default(100) // DOGE required
+  paymentTxHash   String?
+  paymentConfirmedAt DateTime?
+  
+  // Generated NFT
+  cypher          CypherNFT?  @relation(fields: [cypherId], references: [id])
+  cypherId        String?     @unique
+  
+  // Assigned token ID
+  assignedTokenId Int?
+  
+  // Error tracking
+  errorMessage    String?
+  errorCode       String?
+  retryCount      Int         @default(0)
+  
+  // Timing
+  expiresAt       DateTime
+  completedAt     DateTime?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Logs
+  logs            MintLog[]
+  
+  @@index([sessionId])
+  @@index([userId])
+  @@index([status])
+  @@index([paymentAddress])
+}
+
+model MintLog {
+  id          String      @id @default(cuid())
+  
+  session     MintSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId   String
+  
+  level       LogLevel    @default(INFO)
+  message     String
+  metadata    Json?
+  
+  createdAt   DateTime    @default(now())
+  
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}
+
+// ============================================
+// SYSTEM CONFIGURATION
+// ============================================
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([key])
+}
+
+model TokenCounter {
+  id            String   @id @default(cuid())
+  lastTokenId   Int      @default(0)
+  maxSupply     Int      @default(1000)
+  
+  updatedAt     DateTime @updatedAt
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+model MintAnalytics {
+  id              String   @id @default(cuid())
+  date            DateTime @db.Date
+  
+  totalMints      Int      @default(0)
+  successfulMints Int      @default(0)
+  failedMints     Int      @default(0)
+  
+  totalRevenue    Float    @default(0) // DOGE
+  
+  legendaryMints  Int      @default(0)
+  epicMints       Int      @default(0)
+  rareMints       Int      @default(0)
+  commonMints     Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([date])
+  @@index([date])
+}

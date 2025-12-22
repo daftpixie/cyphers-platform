@@ -60,8 +60,8 @@ export async function generatePaymentAddress(sessionId: string): Promise<string>
  * Check if payment has been received for a session
  */
 export async function checkPaymentStatus(
-  paymentAddress: string,
-  expectedAmount: number,
+  _paymentAddress: string,
+  _expectedAmount: number,
   sessionId: string
 ): Promise<PaymentStatus> {
   try {
@@ -296,7 +296,7 @@ export async function finalizeMint(
 /**
  * Get inscription details from the blockchain
  */
-export async function getInscriptionDetails(inscriptionId: string): Promise<{
+export async function getInscriptionDetails(_inscriptionId: string): Promise<{
   exists: boolean;
   confirmed: boolean;
   contentType?: string;

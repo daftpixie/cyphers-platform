@@ -112,7 +112,7 @@ function randomFrom<T>(arr: T[]): T {
 /**
  * Generate random traits for a Cypher
  */
-export function generateTraits(tokenId: number): CypherTraits {
+export function generateTraits(_tokenId: number): CypherTraits {
   const rarityTier = determineRarity();
   
   return {

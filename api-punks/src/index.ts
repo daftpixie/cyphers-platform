@@ -87,12 +87,12 @@ app.use('/cyphers', galleryRoutes);
 app.use('/portfolio', galleryRoutes);
 
 // API documentation redirect
-app.get('/docs', (req, res) => {
+app.get('/docs', (_req, res) => {
   res.redirect('https://github.com/24hrmvp/cyphers-platform#api-endpoints-reference');
 });
 
 // Root endpoint
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({
     name: 'The Cyphers API',
     version: '1.0.0',

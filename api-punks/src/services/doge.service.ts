@@ -206,8 +206,8 @@ export async function cleanupExpiredChallenges(): Promise<number> {
 export async function linkEthAddress(
   userId: string,
   ethAddress: string,
-  signature: string,
-  message: string
+  _signature: string,
+  _message: string
 ): Promise<boolean> {
   // This would verify an Ethereum signature
   // For now, just store the link (full SIWE verification would go here)

@@ -1,49 +1,46 @@
-// src/app/layout.tsx
-import type { Metadata, Viewport } from "next";
-import { Orbitron, Space_Grotesk, Inter } from "next/font/google";
-import "./globals.css";
-import { Providers } from "./providers";
-import { Toaster } from "@/components/ui/toaster";
-import { cn } from "@/lib/utils";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import type { Metadata, Viewport } from 'next';
+import { Orbitron, Space_Grotesk, DM_Sans, Space_Mono } from 'next/font/google';
+import '@/styles/globals.css';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
-const orbitron = Orbitron({ 
-  subsets: ["latin"], 
-  variable: "--font-orbitron",
+// Font configurations
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  variable: '--font-display',
   display: 'swap',
 });
 
-const spaceGrotesk = Space_Grotesk({ 
-  subsets: ["latin"], 
-  variable: "--font-space-grotesk",
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-heading',
   display: 'swap',
 });
 
-const inter = Inter({ 
-  subsets: ["latin"], 
-  variable: "--font-inter",
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-body',
   display: 'swap',
 });
 
-export const viewport: Viewport = {
-  themeColor: '#000000',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-};
+const spaceMono = Space_Mono({
+  weight: ['400', '700'],
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://punks.24hrmvp.xyz'),
   title: {
-    default: "The Cyphers | Encrypted Identities",
-    template: "%s | The Cyphers"
+    default: 'The Cyphers | Encrypted Identities on Dogecoin',
+    template: '%s | The Cyphers',
   },
-  description: "Join the elite network of Web3 builders. Encrypted identities, reputation tracking, and access to exclusive builder tools.",
-  keywords: ["Web3", "Identity", "Builders", "Crypto", "DAO", "Reputation", "Cypherpunks"],
-  authors: [{ name: "24HRMVP" }],
-  creator: "24HRMVP",
-  publisher: "24HRMVP",
+  description: 'Join the elite network of Web3 builders. Privacy is Punk. 1,000 AI-generated Cypherpunk identities inscribed permanently on Dogecoin via Doginals.',
+  keywords: ['NFT', 'Dogecoin', 'Doginals', 'Cypherpunk', 'AI Art', 'Privacy', 'Blockchain', 'Web3', 'Identity', 'Builders'],
+  authors: [{ name: '24HRMVP' }],
+  creator: '24HRMVP',
+  publisher: '24HRMVP',
   robots: {
     index: true,
     follow: true,
@@ -57,84 +54,79 @@ export const metadata: Metadata = {
     apple: [
       { url: '/icon.png', sizes: '180x180', type: 'image/png' },
     ],
-    other: [
-      {
-        rel: 'apple-touch-icon-precomposed',
-        url: '/icon.png',
-      },
-    ],
   },
-  manifest: '/site.webmanifest',
+  manifest: '/manifest.json',
   openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://punks.24hrmvp.xyz",
-    title: "The Cyphers | Encrypted Identities",
-    description: "Join the elite network of Web3 builders. Encrypted identities, reputation tracking, and access to exclusive builder tools.",
-    siteName: "The Cyphers",
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://punks.24hrmvp.xyz',
+    title: 'The Cyphers | Encrypted Identities',
+    description: 'Join the elite network of Web3 builders. Privacy is Punk. 1,000 AI-generated Cypherpunk identities on Dogecoin.',
+    siteName: 'The Cyphers',
     images: [
       {
         url: '/opengraph-image.png',
         width: 1200,
         height: 630,
-        alt: "The Cyphers - Privacy is punk",
+        alt: 'The Cyphers - Privacy is Punk',
       },
       {
         url: '/og-square.png',
         width: 1080,
         height: 1080,
-        alt: "The Cyphers - Square Preview",
+        alt: 'The Cyphers - Square Preview',
       },
     ],
   },
   twitter: {
-    card: "summary_large_image",
-    title: "The Cyphers | Encrypted Identities",
-    description: "Join the elite network of Web3 builders. Encrypted identities, reputation tracking, and access to exclusive builder tools.",
+    card: 'summary_large_image',
+    title: 'The Cyphers | Encrypted Identities',
+    description: 'Join the elite network of Web3 builders. Privacy is Punk. 1,000 AI-generated Cypherpunk identities on Dogecoin.',
     images: ['/twitter-image.png'],
-    creator: "@24HRMVP",
-    site: "@24HRMVP",
+    creator: '@24HRMVP',
+    site: '@24HRMVP',
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0B0E27',
+  colorScheme: 'dark',
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link
-          rel="preload"
-          href="/fonts/Mona-Sans.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-      </head>
-      <body className={cn(
-        "min-h-screen bg-background font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-50",
-        orbitron.variable,
-        spaceGrotesk.variable,
-        inter.variable
-      )}>
-        <Providers>
-          <div className="relative flex min-h-screen flex-col overflow-x-hidden">
-            <SiteHeader />
-            <main className="flex-1 w-full relative z-10">
-              {children}
-            </main>
-            <SiteFooter />
-            
-            {/* Ambient background effects */}
-            <div className="fixed inset-0 z-0 pointer-events-none">
-              <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
-            </div>
-          </div>
-          <Toaster />
-        </Providers>
+    <html 
+      lang="en" 
+      className={`${orbitron.variable} ${spaceGrotesk.variable} ${dmSans.variable} ${spaceMono.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen flex flex-col bg-void text-text-primary antialiased">
+        {/* Matrix background effect */}
+        <div className="fixed inset-0 matrix-bg pointer-events-none z-0" />
+        
+        {/* Ambient background effects */}
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-neon-cyan/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-neon-purple/5 rounded-full blur-3xl" />
+        </div>
+        
+        {/* Main content */}
+        <div className="relative z-10 flex flex-col min-h-screen">
+          <Header />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </div>
+        
+        {/* Scan lines overlay */}
+        <div className="fixed inset-0 pointer-events-none z-50 scan-lines opacity-30" />
       </body>
     </html>
   );

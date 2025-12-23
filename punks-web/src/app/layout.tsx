@@ -1,4 +1,4 @@
-// layout.tsx
+// src/app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import { Orbitron, Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
-// Font configurations
 const orbitron = Orbitron({ 
   subsets: ["latin"], 
   variable: "--font-orbitron",
@@ -34,7 +33,6 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-// Metadata configuration
 export const metadata: Metadata = {
   metadataBase: new URL('https://punks.24hrmvp.xyz'),
   title: {
@@ -107,7 +105,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Preload critical fonts */}
         <link
           rel="preload"
           href="/fonts/Mona-Sans.woff2"

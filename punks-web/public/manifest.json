@@ -1,0 +1,27 @@
+{
+  "name": "The Cyphers",
+  "short_name": "Cyphers",
+  "description": "1,000 On-Chain Encrypted Identities on Dogecoin",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0E27",
+  "theme_color": "#00D9FF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["crypto", "nft", "web3"],
+  "lang": "en-US",
+  "dir": "ltr"
+}

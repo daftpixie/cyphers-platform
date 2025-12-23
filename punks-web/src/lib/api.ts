@@ -88,15 +88,20 @@ class ApiClient {
       '/auth/doge/challenge',
       {
         method: 'POST',
-        body: JSON.stringify({ address }),
+        body: JSON.stringify({ dogeAddress: address }),
       }
     );
   }
 
   async verifySignature(data: AuthVerifyRequest): Promise<ApiResponse<AuthResult>> {
+    // Map frontend field names to backend field names
     return this.request<AuthResult>('/auth/doge/verify', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        dogeAddress: data.address,
+        signature: data.signature,
+        nonce: data.nonce,
+      }),
     });
   }
 

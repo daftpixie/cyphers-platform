@@ -2,6 +2,9 @@
 // Dogecoin wallet authentication and signature verification
 
 import bitcoinMessage from 'bitcoinjs-message';
+import { createHash } from 'crypto';
+import * as secp256k1 from 'secp256k1';
+import bs58check from 'bs58check';
 import { nanoid } from 'nanoid';
 import { prisma } from '../config/database.js';
 import { logger } from '../utils/logger.js';
@@ -17,8 +20,17 @@ const MESSAGE_TEMPLATE = 'Access The Cyphers. Nonce: {nonce}';
 // Mainnet addresses start with 'D', testnet with 'n'
 const DOGE_ADDRESS_REGEX = /^[Dn][1-9A-HJ-NP-Za-km-z]{25,34}$/;
 
-// Dogecoin message prefix (same format as Bitcoin but different text)
-const DOGE_MESSAGE_PREFIX = '\x19Dogecoin Signed Message:\n';
+// Dogecoin network configuration
+const DOGECOIN_NETWORK = {
+  messagePrefix: '\x19Dogecoin Signed Message:\n',
+  bip32: {
+    public: 0x02facafd,
+    private: 0x02fac398,
+  },
+  pubKeyHash: 0x1e,  // 30 in decimal - addresses start with 'D'
+  scriptHash: 0x16,  // 22 in decimal
+  wif: 0x9e,         // 158 in decimal
+};
 
 // Enable demo mode for development/testing
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
@@ -40,6 +52,123 @@ export interface VerifyResult {
  */
 export function isValidDogeAddress(address: string): boolean {
   return DOGE_ADDRESS_REGEX.test(address);
+}
+
+/**
+ * SHA256 hash
+ */
+function sha256(buffer: Buffer): Buffer {
+  return createHash('sha256').update(buffer).digest();
+}
+
+/**
+ * Variable integer encoding helpers
+ */
+function varintBufNum(n: number): Buffer {
+  if (n < 253) {
+    return Buffer.from([n]);
+  } else if (n < 0x10000) {
+    const buf = Buffer.alloc(3);
+    buf[0] = 253;
+    buf.writeUInt16LE(n, 1);
+    return buf;
+  } else if (n < 0x100000000) {
+    const buf = Buffer.alloc(5);
+    buf[0] = 254;
+    buf.writeUInt32LE(n, 1);
+    return buf;
+  } else {
+    const buf = Buffer.alloc(9);
+    buf[0] = 255;
+    buf.writeBigUInt64LE(BigInt(n), 1);
+    return buf;
+  }
+}
+
+/**
+ * Calculate magic hash for message verification (Dogecoin format)
+ */
+function magicHash(message: string, messagePrefix: string): Buffer {
+  const prefix = Buffer.from(messagePrefix, 'utf8');
+  const messageBuffer = Buffer.from(message, 'utf8');
+  const messageVarInt = varintBufNum(messageBuffer.length);
+  
+  const buffer = Buffer.concat([prefix, messageVarInt, messageBuffer]);
+  return sha256(sha256(buffer));
+}
+
+/**
+ * Get public key hash from public key (RIPEMD160(SHA256(pubkey)))
+ */
+function hash160(buffer: Buffer): Buffer {
+  const sha = createHash('sha256').update(buffer).digest();
+  return createHash('ripemd160').update(sha).digest();
+}
+
+/**
+ * Encode public key hash to Dogecoin address
+ */
+function encodeDogeAddress(hash: Buffer, version: number = DOGECOIN_NETWORK.pubKeyHash): string {
+  const payload = Buffer.concat([Buffer.from([version]), hash]);
+  return bs58check.encode(payload);
+}
+
+/**
+ * Custom Dogecoin signature verification
+ * This handles the specific message format and address encoding
+ */
+function verifyDogeSignature(message: string, address: string, signatureBase64: string): boolean {
+  try {
+    // Decode the signature from base64
+    const signatureBuffer = Buffer.from(signatureBase64, 'base64');
+    
+    if (signatureBuffer.length !== 65) {
+      logger.debug('Invalid signature length', { length: signatureBuffer.length });
+      return false;
+    }
+    
+    // Extract recovery flag and signature
+    const flagByte = signatureBuffer[0] - 27;
+    const recovery = flagByte & 3;
+    const compressed = !!(flagByte & 4);
+    
+    logger.debug('Signature details', {
+      flagByte: signatureBuffer[0],
+      recovery,
+      compressed,
+    });
+    
+    // Get the r,s signature (remove header byte)
+    const signature = signatureBuffer.slice(1);
+    
+    // Calculate message hash with Dogecoin prefix
+    const hash = magicHash(message, DOGECOIN_NETWORK.messagePrefix);
+    
+    // Recover public key from signature
+    let publicKey: Uint8Array;
+    try {
+      publicKey = secp256k1.ecdsaRecover(signature, recovery, hash, compressed);
+    } catch (e) {
+      logger.debug('Failed to recover public key', { error: String(e) });
+      return false;
+    }
+    
+    // Derive address from recovered public key
+    const pubKeyHash = hash160(Buffer.from(publicKey));
+    const recoveredAddress = encodeDogeAddress(pubKeyHash);
+    
+    logger.debug('Address comparison', {
+      providedAddress: address,
+      recoveredAddress,
+      match: recoveredAddress === address,
+    });
+    
+    // Check if recovered address matches
+    return recoveredAddress === address;
+  } catch (error) {
+    logger.debug('Custom verification error', { error: String(error) });
+    return false;
+  }
 }
 
 /**
@@ -125,77 +254,95 @@ export async function verifySignature(
   });
   
   let isValid = false;
+  let successMethod = '';
   
   // In demo mode, skip signature verification
   if (DEMO_MODE) {
     logger.warn('DEMO MODE ENABLED - Skipping signature verification');
     isValid = true;
+    successMethod = 'DEMO_MODE';
   } else {
-    // Try multiple verification methods
-    const verificationMethods = [
-      // Method 1: Dogecoin prefix with string signature
-      () => {
-        try {
-          return bitcoinMessage.verify(message, dogeAddress, signature, DOGE_MESSAGE_PREFIX);
-        } catch (e) {
-          logger.debug('Method 1 failed', { error: String(e) });
-          return false;
-        }
-      },
-      // Method 2: Dogecoin prefix with buffer signature
-      () => {
-        try {
-          const sigBuffer = Buffer.from(signature, 'base64');
-          return bitcoinMessage.verify(message, dogeAddress, sigBuffer, DOGE_MESSAGE_PREFIX);
-        } catch (e) {
-          logger.debug('Method 2 failed', { error: String(e) });
-          return false;
-        }
-      },
-      // Method 3: No prefix (library will use Bitcoin default)
-      () => {
-        try {
-          return bitcoinMessage.verify(message, dogeAddress, signature);
-        } catch (e) {
-          logger.debug('Method 3 failed', { error: String(e) });
-          return false;
-        }
-      },
-      // Method 4: With checkSegwitAlways flag
-      () => {
-        try {
-          return bitcoinMessage.verify(message, dogeAddress, signature, DOGE_MESSAGE_PREFIX, true);
-        } catch (e) {
-          logger.debug('Method 4 failed', { error: String(e) });
-          return false;
-        }
-      },
-      // Method 5: Buffer signature without prefix
-      () => {
-        try {
-          const sigBuffer = Buffer.from(signature, 'base64');
-          return bitcoinMessage.verify(message, dogeAddress, sigBuffer);
-        } catch (e) {
-          logger.debug('Method 5 failed', { error: String(e) });
-          return false;
-        }
-      },
-    ];
+    // Method 1: Custom Dogecoin verification (most reliable)
+    try {
+      isValid = verifyDogeSignature(message, dogeAddress, signature);
+      if (isValid) successMethod = 'custom_doge_verify';
+      logger.info('Method 1 (custom Doge verify) result:', { isValid });
+    } catch (e) {
+      logger.debug('Method 1 failed', { error: String(e) });
+    }
     
-    for (let i = 0; i < verificationMethods.length; i++) {
-      const result = verificationMethods[i]();
-      logger.info(`Verification method ${i + 1} result: ${result}`);
-      if (result) {
-        isValid = true;
-        break;
+    // Method 2: bitcoinjs-message with Dogecoin prefix
+    if (!isValid) {
+      try {
+        isValid = bitcoinMessage.verify(
+          message, 
+          dogeAddress, 
+          signature, 
+          DOGECOIN_NETWORK.messagePrefix
+        );
+        if (isValid) successMethod = 'bitcoinjs_doge_prefix';
+        logger.info('Method 2 (bitcoinjs Doge prefix) result:', { isValid });
+      } catch (e) {
+        logger.debug('Method 2 failed', { error: String(e) });
+      }
+    }
+    
+    // Method 3: bitcoinjs-message with buffer signature
+    if (!isValid) {
+      try {
+        const sigBuffer = Buffer.from(signature, 'base64');
+        isValid = bitcoinMessage.verify(
+          message, 
+          dogeAddress, 
+          sigBuffer, 
+          DOGECOIN_NETWORK.messagePrefix
+        );
+        if (isValid) successMethod = 'bitcoinjs_buffer';
+        logger.info('Method 3 (bitcoinjs buffer) result:', { isValid });
+      } catch (e) {
+        logger.debug('Method 3 failed', { error: String(e) });
+      }
+    }
+    
+    // Method 4: bitcoinjs-message with checkSegwitAlways
+    if (!isValid) {
+      try {
+        isValid = bitcoinMessage.verify(
+          message, 
+          dogeAddress, 
+          signature, 
+          DOGECOIN_NETWORK.messagePrefix,
+          true  // checkSegwitAlways
+        );
+        if (isValid) successMethod = 'bitcoinjs_segwit';
+        logger.info('Method 4 (bitcoinjs segwit) result:', { isValid });
+      } catch (e) {
+        logger.debug('Method 4 failed', { error: String(e) });
+      }
+    }
+    
+    // Method 5: No prefix (default Bitcoin)
+    if (!isValid) {
+      try {
+        isValid = bitcoinMessage.verify(message, dogeAddress, signature);
+        if (isValid) successMethod = 'bitcoinjs_default';
+        logger.info('Method 5 (bitcoinjs default) result:', { isValid });
+      } catch (e) {
+        logger.debug('Method 5 failed', { error: String(e) });
       }
     }
   }
   
   if (!isValid) {
-    logger.warn('All signature verification methods failed', { dogeAddress, signature: signature.substring(0, 50) });
+    logger.warn('All signature verification methods failed', { 
+      dogeAddress, 
+      signature: signature.substring(0, 50),
+      message,
+    });
     throw new UnauthorizedError('Invalid signature', 'INVALID_SIGNATURE');
   }
+  
+  logger.info('Signature verified successfully', { method: successMethod, dogeAddress });
   
   // Mark challenge as used
   await prisma.authChallenge.update({

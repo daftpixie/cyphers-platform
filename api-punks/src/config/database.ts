@@ -5,6 +5,9 @@ import { PrismaClient } from '@prisma/client';
 import { config } from './env.js';
 import { logger } from '../utils/logger.js';
 
+// Transaction client type
+type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+
 // Prevent multiple instances in development
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -57,7 +60,7 @@ export async function initializeTokenCounter(): Promise<void> {
 
 // Get next available token ID (atomic operation)
 export async function getNextTokenId(): Promise<number | null> {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: TransactionClient) => {
     const counter = await tx.tokenCounter.findFirst();
     if (!counter) {
       throw new Error('Token counter not initialized');

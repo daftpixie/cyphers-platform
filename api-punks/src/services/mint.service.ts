@@ -2,7 +2,6 @@
 // Minting orchestration service - manages the complete mint flow
 
 import { nanoid } from 'nanoid';
-import { Prisma } from '@prisma/client';
 import { prisma, getNextTokenId } from '../config/database.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/env.js';
@@ -142,7 +141,7 @@ async function processGeneration(
         glitchLevel: result.traits.glitchLevel,
         backgroundStyle: result.traits.backgroundStyle,
         accentColor: result.traits.accentColor,
-        traitMetadata: result.metadata as unknown as Prisma.InputJsonValue,
+        traitMetadata: result.metadata ?? undefined,
         generationPrompt: result.prompt,
         generationModel: 'claude-sonnet-4-5',
         ownerAddress,
@@ -435,7 +434,7 @@ export async function getMintStats(): Promise<{
     COMMON: 0,
   };
   
-  breakdown.forEach((item) => {
+  breakdown.forEach((item: { rarityTier: string; _count: number }) => {
     rarityBreakdown[item.rarityTier] = item._count;
   });
   

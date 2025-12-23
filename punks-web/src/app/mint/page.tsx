@@ -1,102 +1,89 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
-import { Terminal } from '@/components/ui/Terminal';
-import { Button } from '@/components/ui/Button';
-import { CypherCard } from '@/components/CypherCard';
-import { useWallet } from '@/hooks/useWallet';
-import { useMint, getStatusLabel, getStatusColor, isTerminalStatus } from '@/hooks/useMint';
-import { api } from '@/lib/api';
-import type { MintStats } from '@/types';
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
+import Terminal from '@/components/ui/Terminal'
+import Button from '@/components/ui/Button'
+import { CypherCard } from '@/components/CypherCard'
+import { useWallet } from '@/hooks/useWallet'
+import { useMint, getStatusLabel, getStatusColor, isTerminalStatus } from '@/hooks/useMint'
+import { api } from '@/lib/api'
+import type { MintStats } from '@/types'
 
 // QR Code component (simple SVG-based)
-function QRCode({ value, size = 200 }: { value: string; size?: number }) {
+function QRCode({ value, size = 200 }: { value: string, size?: number }) {
   // In production, use a proper QR code library
   return (
-    <div 
-      className="bg-white p-4 rounded-lg inline-block"
-      style={{ width: size, height: size }}
-    >
+    <div className="bg-white p-4 rounded-lg inline-block" style={{ width: size, height: size }}>
       <div className="w-full h-full flex items-center justify-center text-void font-mono text-xs text-center break-all">
         {/* Placeholder - use qrcode.react or similar in production */}
         <span className="text-[8px]">{value}</span>
       </div>
     </div>
-  );
+  )
 }
 
 export default function MintPage() {
-  const { wallet, isConnected, connect, isConnecting, error: walletError } = useWallet();
-  const { 
-    session, 
-    cypher, 
-    isLoading, 
-    error: mintError, 
-    startMint, 
-    confirmPayment, 
-    cancelMint, 
-    reset 
-  } = useMint();
-  
-  const [stats, setStats] = useState<MintStats | null>(null);
-  const [txHash, setTxHash] = useState('');
-  const [step, setStep] = useState<'connect' | 'ready' | 'minting' | 'complete'>('connect');
+  const { wallet, isConnected, connect, isConnecting, error: walletError } = useWallet()
+  const { session, cypher, isLoading, error: mintError, startMint, confirmPayment, cancelMint, reset } = useMint()
+  const [stats, setStats] = useState<MintStats | null>(null)
+  const [txHash, setTxHash] = useState('')
+  const [step, setStep] = useState<'connect' | 'ready' | 'minting' | 'complete'>('connect')
 
   // Fetch stats
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await api.getMintStats();
+        const res = await api.getMintStats()
         if (res.success && res.data) {
-          setStats(res.data);
+          setStats(res.data)
         }
       } catch (err) {
-        console.error('Error fetching stats:', err);
+        console.error('Error fetching stats:', err)
       }
     }
-    fetchStats();
-  }, []);
+    fetchStats()
+  }, [])
 
   // Update step based on state
   useEffect(() => {
     if (!isConnected) {
-      setStep('connect');
+      setStep('connect')
     } else if (!session) {
-      setStep('ready');
+      setStep('ready')
     } else if (session.status === 'CONFIRMED') {
-      setStep('complete');
+      setStep('complete')
     } else {
-      setStep('minting');
+      setStep('minting')
     }
-  }, [isConnected, session]);
+  }, [isConnected, session])
 
   const handleStartMint = async () => {
     try {
-      await startMint();
+      await startMint()
     } catch (err) {
-      console.error('Error starting mint:', err);
+      console.error('Error starting mint:', err)
     }
-  };
+  }
 
   const handleConfirmPayment = async () => {
-    if (!txHash.trim()) return;
+    if (!txHash.trim()) return
     try {
-      await confirmPayment(txHash);
-      setTxHash('');
+      await confirmPayment(txHash)
+      setTxHash('')
     } catch (err) {
-      console.error('Error confirming payment:', err);
+      console.error('Error confirming payment:', err)
     }
-  };
+  }
 
   const handleReset = () => {
-    reset();
-    setTxHash('');
-  };
+    reset()
+    setTxHash('')
+  }
 
   return (
-    <div className="min-h-screen py-20">
+    <div className="min-h-screen pt-32 pb-20">
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <motion.div
@@ -120,15 +107,15 @@ export default function MintPage() {
             className="glass-panel p-4 mb-8 flex justify-center gap-8 font-mono text-sm"
           >
             <div>
-              <span className="text-text-secondary">Minted:</span>{' '}
+              <span className="text-text-secondary">Minted: </span>
               <span className="text-neon-cyan">{stats.totalMinted}</span>
             </div>
             <div>
-              <span className="text-text-secondary">Available:</span>{' '}
+              <span className="text-text-secondary">Available: </span>
               <span className="text-neon-green">{stats.available}</span>
             </div>
             <div>
-              <span className="text-text-secondary">Supply:</span>{' '}
+              <span className="text-text-secondary">Supply: </span>
               <span className="text-text-primary">{stats.maxSupply}</span>
             </div>
           </motion.div>
@@ -146,9 +133,7 @@ export default function MintPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-4"
               >
-                <p className="text-neon-green">
-                  &gt; Establishing secure connection...
-                </p>
+                <p className="text-neon-green">&gt; Establishing secure connection...</p>
                 <p className="text-text-secondary">
                   Connect your Dogecoin wallet to begin.
                 </p>
@@ -164,9 +149,7 @@ export default function MintPage() {
                 </div>
 
                 {walletError && (
-                  <p className="text-red-500 text-sm mt-2">
-                    Error: {walletError}
-                  </p>
+                  <p className="text-red-500 text-sm mt-2">Error: {walletError}</p>
                 )}
               </motion.div>
             )}
@@ -180,9 +163,7 @@ export default function MintPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-4"
               >
-                <p className="text-neon-green">
-                  &gt; Connection established.
-                </p>
+                <p className="text-neon-green">&gt; Connection established.</p>
                 <p className="text-text-secondary">
                   Wallet: <span className="text-neon-cyan">{wallet?.address}</span>
                 </p>
@@ -204,9 +185,7 @@ export default function MintPage() {
                 </div>
 
                 {mintError && (
-                  <p className="text-red-500 text-sm mt-2">
-                    Error: {mintError}
-                  </p>
+                  <p className="text-red-500 text-sm mt-2">Error: {mintError}</p>
                 )}
               </motion.div>
             )}
@@ -223,23 +202,19 @@ export default function MintPage() {
                 {/* Status */}
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 rounded-full bg-neon-cyan animate-pulse" />
-                  <p className={getStatusColor(session.status)}>
-                    {getStatusLabel(session.status)}
-                  </p>
+                  <p className={getStatusColor(session.status)}>{getStatusLabel(session.status)}</p>
                 </div>
 
                 {/* Progress bar */}
                 <div className="w-full bg-surface rounded-full h-2 overflow-hidden">
-                  <motion.div
+                  <motion.div 
                     className="h-full bg-gradient-to-r from-neon-cyan to-neon-magenta"
                     initial={{ width: 0 }}
                     animate={{ width: `${session.progress}%` }}
                     transition={{ duration: 0.5 }}
                   />
                 </div>
-                <p className="text-text-muted text-sm">
-                  Progress: {session.progress}%
-                </p>
+                <p className="text-text-muted text-sm">Progress: {session.progress}%</p>
 
                 {/* Payment Section */}
                 {session.status === 'AWAITING_PAYMENT' && session.paymentAddress && (
@@ -248,9 +223,7 @@ export default function MintPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mt-6 p-6 bg-surface rounded-lg border border-border"
                   >
-                    <p className="text-neon-orange font-bold mb-4">
-                      Send DOGE to complete inscription:
-                    </p>
+                    <p className="text-neon-orange font-bold mb-4">Send DOGE to complete inscription</p>
                     
                     <div className="flex flex-col md:flex-row gap-6 items-center">
                       <QRCode value={session.paymentAddress} />
@@ -262,10 +235,11 @@ export default function MintPage() {
                             {session.paymentAddress}
                           </p>
                         </div>
+                        
                         <div>
                           <p className="text-text-muted text-sm">Amount:</p>
                           <p className="font-mono text-2xl text-gold">
-                            Ð {session.paymentAmount?.toFixed(2) ?? '—'}
+                            Ð {session.paymentAmount?.toFixed(2) ?? '0.00'}
                           </p>
                         </div>
                       </div>
@@ -303,26 +277,20 @@ export default function MintPage() {
                 {/* Inscribing Status */}
                 {session.status === 'INSCRIBING' && (
                   <div className="mt-6 text-center">
-                    <p className="text-neon-magenta">
-                      Inscribing your Cypher on Dogecoin...
-                    </p>
-                    <p className="text-text-muted text-sm mt-2">
-                      This may take several minutes.
-                    </p>
+                    <p className="text-neon-magenta">Inscribing your Cypher on Dogecoin...</p>
+                    <p className="text-text-muted text-sm mt-2">This may take several minutes.</p>
                   </div>
                 )}
 
                 {/* Token ID */}
                 {session.tokenId && (
                   <p className="text-text-secondary">
-                    Token ID: <span className="text-neon-cyan">#{session.tokenId}</span>
+                    Token ID: <span className="text-neon-cyan">{session.tokenId}</span>
                   </p>
                 )}
 
                 {mintError && (
-                  <p className="text-red-500 text-sm mt-2">
-                    Error: {mintError}
-                  </p>
+                  <p className="text-red-500 text-sm mt-2">Error: {mintError}</p>
                 )}
               </motion.div>
             )}
@@ -336,9 +304,7 @@ export default function MintPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
-                <p className="text-neon-green text-xl">
-                  &gt; Encryption complete.
-                </p>
+                <p className="text-neon-green text-xl">&gt; Encryption complete.</p>
                 <p className="text-text-secondary">
                   Your Cypher has been inscribed on Dogecoin forever.
                 </p>
@@ -354,13 +320,9 @@ export default function MintPage() {
                 )}
 
                 <div className="flex justify-center gap-4">
-                  <Button variant="neon" onClick={handleReset}>
-                    Mint Another
-                  </Button>
+                  <Button variant="neon" onClick={handleReset}>Mint Another</Button>
                   <Link href={`/gallery/${cypher.id}`}>
-                    <Button variant="ghost">
-                      View Details
-                    </Button>
+                    <Button variant="ghost">View Details</Button>
                   </Link>
                 </div>
               </motion.div>
@@ -375,9 +337,7 @@ export default function MintPage() {
           transition={{ delay: 0.3 }}
           className="glass-panel p-6"
         >
-          <h3 className="font-heading text-lg font-bold mb-4 text-neon-cyan">
-            How It Works
-          </h3>
+          <h3 className="font-heading text-lg font-bold mb-4 text-neon-cyan">How It Works</h3>
           <ol className="space-y-3 font-mono text-sm text-text-secondary">
             <li className="flex gap-3">
               <span className="text-neon-cyan">01.</span>
@@ -399,5 +359,5 @@ export default function MintPage() {
         </motion.div>
       </div>
     </div>
-  );
+  )
 }

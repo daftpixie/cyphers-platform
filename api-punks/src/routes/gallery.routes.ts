@@ -81,7 +81,7 @@ router.get(
     ]);
     
     // Format response
-    const formattedCyphers = cyphers.map((cypher) => ({
+    const formattedCyphers = cyphers.map((cypher: typeof cyphers[number]) => ({
       id: cypher.id,
       tokenId: cypher.tokenId,
       name: `Cypher #${cypher.tokenId}`,
@@ -255,7 +255,7 @@ router.get(
     });
     
     // Format response
-    const formattedCyphers = cyphers.map((cypher) => ({
+    const formattedCyphers = cyphers.map((cypher: typeof cyphers[number]) => ({
       id: cypher.id,
       tokenId: cypher.tokenId,
       name: `Cypher #${cypher.tokenId}`,
@@ -282,10 +282,10 @@ router.get(
         cyphers: formattedCyphers,
         stats: {
           total,
-          legendary: cyphers.filter((c) => c.rarityTier === 'LEGENDARY').length,
-          epic: cyphers.filter((c) => c.rarityTier === 'EPIC').length,
-          rare: cyphers.filter((c) => c.rarityTier === 'RARE').length,
-          common: cyphers.filter((c) => c.rarityTier === 'COMMON').length,
+          legendary: cyphers.filter((c: typeof cyphers[number]) => c.rarityTier === 'LEGENDARY').length,
+          epic: cyphers.filter((c: typeof cyphers[number]) => c.rarityTier === 'EPIC').length,
+          rare: cyphers.filter((c: typeof cyphers[number]) => c.rarityTier === 'RARE').length,
+          common: cyphers.filter((c: typeof cyphers[number]) => c.rarityTier === 'COMMON').length,
         },
         pagination: {
           page,

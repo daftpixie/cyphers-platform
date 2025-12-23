@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/mint', label: 'Encrypt Identity' },
   { href: '/gallery', label: 'Gallery' },
-  { href: '/manifesto', label: 'Manifesto' },
+  { href: '/portfolio', label: 'Portfolio' },
 ];
 
 export function Header() {

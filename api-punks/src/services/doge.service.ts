@@ -17,6 +17,12 @@ const MESSAGE_TEMPLATE = 'Access The Cyphers. Nonce: {nonce}';
 // Mainnet addresses start with 'D', testnet with 'n'
 const DOGE_ADDRESS_REGEX = /^[Dn][1-9A-HJ-NP-Za-km-z]{25,34}$/;
 
+// Dogecoin message prefix (same format as Bitcoin but different text)
+const DOGE_MESSAGE_PREFIX = '\x19Dogecoin Signed Message:\n';
+
+// Enable demo mode for development/testing
+const DEMO_MODE = process.env.DEMO_MODE === 'true';
+
 export interface ChallengeResult {
   nonce: string;
   message: string;
@@ -109,93 +115,85 @@ export async function verifySignature(
   // Construct the message that was signed
   const message = MESSAGE_TEMPLATE.replace('{nonce}', nonce);
   
-  // Verify the signature
-  let isValid = false;
-  
   // Log for debugging
-  logger.info('Verifying signature', { 
+  logger.info('Attempting signature verification', { 
     message, 
     dogeAddress, 
     signatureLength: signature.length,
-    signaturePreview: signature.substring(0, 20) + '...'
+    signaturePreview: signature.substring(0, 30) + '...',
+    demoMode: DEMO_MODE,
   });
   
-  try {
-    // Method 1: Standard bitcoinjs-message verification
-    // Dogecoin uses the same signing format as Bitcoin
-    isValid = bitcoinMessage.verify(
-      message,
-      dogeAddress,
-      signature,
-      '\x19Dogecoin Signed Message:\n' // Dogecoin message prefix
-    );
-    logger.info('Method 1 (Doge prefix) result:', { isValid });
-  } catch (error) {
-    logger.warn('Method 1 failed', { error: String(error) });
-  }
+  let isValid = false;
   
-  if (!isValid) {
-    try {
-      // Method 2: Try with Bitcoin prefix (some wallets use this)
-      isValid = bitcoinMessage.verify(
-        message,
-        dogeAddress,
-        signature,
-        '\x19Bitcoin Signed Message:\n'
-      );
-      logger.info('Method 2 (Bitcoin prefix) result:', { isValid });
-    } catch (error) {
-      logger.warn('Method 2 failed', { error: String(error) });
+  // In demo mode, skip signature verification
+  if (DEMO_MODE) {
+    logger.warn('DEMO MODE ENABLED - Skipping signature verification');
+    isValid = true;
+  } else {
+    // Try multiple verification methods
+    const verificationMethods = [
+      // Method 1: Dogecoin prefix with string signature
+      () => {
+        try {
+          return bitcoinMessage.verify(message, dogeAddress, signature, DOGE_MESSAGE_PREFIX);
+        } catch (e) {
+          logger.debug('Method 1 failed', { error: String(e) });
+          return false;
+        }
+      },
+      // Method 2: Dogecoin prefix with buffer signature
+      () => {
+        try {
+          const sigBuffer = Buffer.from(signature, 'base64');
+          return bitcoinMessage.verify(message, dogeAddress, sigBuffer, DOGE_MESSAGE_PREFIX);
+        } catch (e) {
+          logger.debug('Method 2 failed', { error: String(e) });
+          return false;
+        }
+      },
+      // Method 3: No prefix (library will use Bitcoin default)
+      () => {
+        try {
+          return bitcoinMessage.verify(message, dogeAddress, signature);
+        } catch (e) {
+          logger.debug('Method 3 failed', { error: String(e) });
+          return false;
+        }
+      },
+      // Method 4: With checkSegwitAlways flag
+      () => {
+        try {
+          return bitcoinMessage.verify(message, dogeAddress, signature, DOGE_MESSAGE_PREFIX, true);
+        } catch (e) {
+          logger.debug('Method 4 failed', { error: String(e) });
+          return false;
+        }
+      },
+      // Method 5: Buffer signature without prefix
+      () => {
+        try {
+          const sigBuffer = Buffer.from(signature, 'base64');
+          return bitcoinMessage.verify(message, dogeAddress, sigBuffer);
+        } catch (e) {
+          logger.debug('Method 5 failed', { error: String(e) });
+          return false;
+        }
+      },
+    ];
+    
+    for (let i = 0; i < verificationMethods.length; i++) {
+      const result = verificationMethods[i]();
+      logger.info(`Verification method ${i + 1} result: ${result}`);
+      if (result) {
+        isValid = true;
+        break;
+      }
     }
   }
   
   if (!isValid) {
-    try {
-      // Method 3: Try with base64 decoded signature buffer
-      const signatureBuffer = Buffer.from(signature, 'base64');
-      isValid = bitcoinMessage.verify(
-        message,
-        dogeAddress,
-        signatureBuffer,
-        '\x19Dogecoin Signed Message:\n'
-      );
-      logger.info('Method 3 (buffer + Doge prefix) result:', { isValid });
-    } catch (error) {
-      logger.warn('Method 3 failed', { error: String(error) });
-    }
-  }
-  
-  if (!isValid) {
-    try {
-      // Method 4: Try without explicit prefix (library default)
-      isValid = bitcoinMessage.verify(
-        message,
-        dogeAddress,
-        signature
-      );
-      logger.info('Method 4 (no prefix) result:', { isValid });
-    } catch (error) {
-      logger.warn('Method 4 failed', { error: String(error) });
-    }
-  }
-  
-  if (!isValid) {
-    try {
-      // Method 5: Try with checkSegwitAlways flag
-      isValid = bitcoinMessage.verify(
-        message,
-        dogeAddress,
-        signature,
-        undefined,
-        true
-      );
-      logger.info('Method 5 (segwit check) result:', { isValid });
-    } catch (error) {
-      logger.warn('Method 5 failed', { error: String(error) });
-    }
-  }
-  
-  if (!isValid) {
+    logger.warn('All signature verification methods failed', { dogeAddress, signature: signature.substring(0, 50) });
     throw new UnauthorizedError('Invalid signature', 'INVALID_SIGNATURE');
   }
   
@@ -230,7 +228,7 @@ export async function verifySignature(
     });
   }
   
-  logger.info('User authenticated', { userId: user.id, dogeAddress });
+  logger.info('User authenticated successfully', { userId: user.id, dogeAddress });
   
   return {
     valid: true,

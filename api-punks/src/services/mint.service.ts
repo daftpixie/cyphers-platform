@@ -141,7 +141,7 @@ async function processGeneration(
         glitchLevel: result.traits.glitchLevel,
         backgroundStyle: result.traits.backgroundStyle,
         accentColor: result.traits.accentColor,
-        traitMetadata: result.metadata ?? undefined,
+        traitMetadata: result.metadata ? JSON.parse(JSON.stringify(result.metadata)) : undefined,
         generationPrompt: result.prompt,
         generationModel: 'claude-sonnet-4-5',
         ownerAddress,

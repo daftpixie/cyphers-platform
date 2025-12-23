@@ -111,28 +111,87 @@ export async function verifySignature(
   
   // Verify the signature
   let isValid = false;
+  
+  // Log for debugging
+  logger.info('Verifying signature', { 
+    message, 
+    dogeAddress, 
+    signatureLength: signature.length,
+    signaturePreview: signature.substring(0, 20) + '...'
+  });
+  
   try {
-    // bitcoinjs-message uses Bitcoin's message format which Dogecoin also uses
-    // We need to handle the signature format (base64 encoded)
+    // Method 1: Standard bitcoinjs-message verification
+    // Dogecoin uses the same signing format as Bitcoin
     isValid = bitcoinMessage.verify(
       message,
       dogeAddress,
       signature,
-      undefined, // No prefix override needed
-      true // Check for segwit (Dogecoin doesn't use it but library supports both)
+      '\x19Dogecoin Signed Message:\n' // Dogecoin message prefix
     );
+    logger.info('Method 1 (Doge prefix) result:', { isValid });
   } catch (error) {
-    logger.warn('Signature verification error', { error, dogeAddress });
-    // Try alternative verification for different signature formats
+    logger.warn('Method 1 failed', { error: String(error) });
+  }
+  
+  if (!isValid) {
     try {
+      // Method 2: Try with Bitcoin prefix (some wallets use this)
+      isValid = bitcoinMessage.verify(
+        message,
+        dogeAddress,
+        signature,
+        '\x19Bitcoin Signed Message:\n'
+      );
+      logger.info('Method 2 (Bitcoin prefix) result:', { isValid });
+    } catch (error) {
+      logger.warn('Method 2 failed', { error: String(error) });
+    }
+  }
+  
+  if (!isValid) {
+    try {
+      // Method 3: Try with base64 decoded signature buffer
       const signatureBuffer = Buffer.from(signature, 'base64');
       isValid = bitcoinMessage.verify(
         message,
         dogeAddress,
-        signatureBuffer
+        signatureBuffer,
+        '\x19Dogecoin Signed Message:\n'
       );
-    } catch {
-      isValid = false;
+      logger.info('Method 3 (buffer + Doge prefix) result:', { isValid });
+    } catch (error) {
+      logger.warn('Method 3 failed', { error: String(error) });
+    }
+  }
+  
+  if (!isValid) {
+    try {
+      // Method 4: Try without explicit prefix (library default)
+      isValid = bitcoinMessage.verify(
+        message,
+        dogeAddress,
+        signature
+      );
+      logger.info('Method 4 (no prefix) result:', { isValid });
+    } catch (error) {
+      logger.warn('Method 4 failed', { error: String(error) });
+    }
+  }
+  
+  if (!isValid) {
+    try {
+      // Method 5: Try with checkSegwitAlways flag
+      isValid = bitcoinMessage.verify(
+        message,
+        dogeAddress,
+        signature,
+        undefined,
+        true
+      );
+      logger.info('Method 5 (segwit check) result:', { isValid });
+    } catch (error) {
+      logger.warn('Method 5 failed', { error: String(error) });
     }
   }
   

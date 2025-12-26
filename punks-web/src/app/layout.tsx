@@ -3,6 +3,7 @@ import { Orbitron, Space_Grotesk, DM_Sans, Space_Mono } from 'next/font/google';
 import '@/styles/globals.css';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { PlausibleMultiDomain } from '@/components/analytics/PlausibleProvider';
 
 // Font configurations
 const orbitron = Orbitron({
@@ -106,6 +107,14 @@ export default function RootLayout({
       className={`${orbitron.variable} ${spaceGrotesk.variable} ${dmSans.variable} ${spaceMono.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Preconnect to analytics for faster tracking */}
+        <link rel="preconnect" href="https://analytics.24hrmvp.xyz" />
+        
+        {/* Plausible Analytics (self-hosted, privacy-first) */}
+        {/* Tracks to both punks.24hrmvp.xyz and all.24hrmvp.xyz aggregate dashboard */}
+        <PlausibleMultiDomain domains={['punks.24hrmvp.xyz', 'all.24hrmvp.xyz']} />
+      </head>
       <body className="min-h-screen flex flex-col bg-void text-text-primary antialiased">
         {/* Matrix background effect */}
         <div className="fixed inset-0 matrix-bg pointer-events-none z-0" />

@@ -71,8 +71,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/manifesto" className="text-sm text-text-secondary hover:text-neon-cyan transition-colors">
-                  Manifesto
+                <Link href="/portfolio" className="text-sm text-text-secondary hover:text-neon-cyan transition-colors">
+                  Portfolio
                 </Link>
               </li>
               <li>
@@ -99,16 +99,6 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href={LINKS.docs}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-text-secondary hover:text-neon-cyan transition-colors"
-                >
-                  Documentation
-                </a>
-              </li>
-              <li>
-                <a
                   href="https://dogechain.info"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -122,12 +112,12 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="https://doginals.com"
+                  href="https://24hrmvp.xyz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-text-secondary hover:text-neon-cyan transition-colors inline-flex items-center gap-1"
                 >
-                  Doginals Protocol
+                  Analytics
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
